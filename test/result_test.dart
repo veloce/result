@@ -85,16 +85,22 @@ void main() {
       expect(() => result.failure, throwsException);
     });
 
-    test('match with success', () {
+    test('fold with success', () {
       final result = getUser(value: true);
 
-      expect(result.match((success) => success, (_) => 'default'), 'John Doe');
+      expect(
+          result.fold(
+              onSuccess: (success) => success, onFailure: (_) => 'default'),
+          'John Doe');
     });
 
-    test('match with failure', () {
+    test('fold with failure', () {
       final result = getUser(value: false);
 
-      expect(result.match((success) => success, (_) => 'default'), 'default');
+      expect(
+          result.fold(
+              onSuccess: (success) => success, onFailure: (_) => 'default'),
+          'default');
     });
 
     test('Apply map transformation to successful operation results', () {

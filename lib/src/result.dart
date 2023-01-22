@@ -114,24 +114,14 @@ abstract class Result<S, F> {
   }
 
   /// Applies `onSuccess` if this is a [Failure] or `onFailure` if this is a [Success].
-  ///
-  /// ```dart
-  /// final result = await getPhotos();
-  ///
-  /// if (result.isSuccess) {
-  ///   final items = result.map((i) => i.where((j) => j.title.length > 60)).success;
-  ///   print('Number of Long Titles: ${items.length}');
-  /// } else {
-  ///   print('Error: ${result.failure}');
-  /// }
-  /// ```
-  S match(S Function(S success) onSuccess, S Function(F failure) onFailure) {
+  S fold({
+    required S Function(S success) onSuccess,
+    required S Function(F failure) onFailure,
+  }) {
     if (isSuccess) {
-      final s = this as Success<S, F>;
-      return onSuccess(s.value);
+      return onSuccess((this as Success<S, F>).value);
     } else {
-      final f = this as Failure<S, F>;
-      return onFailure(f.value);
+      return onFailure((this as Failure<S, F>).value);
     }
   }
 
