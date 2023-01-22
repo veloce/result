@@ -17,6 +17,22 @@ void main() {
       random = null;
     });
 
+    test('tryCatch constructor with success', () {
+      final result = Result<String, String>.tryCatch(
+          () => 'John Doe', (error, _) => error.toString());
+
+      expect(result.success, 'John Doe');
+    });
+
+    test('tryCatch constructor with failure', () {
+      final result = Result<String, String>.tryCatch(
+        () => throw Exception('error'),
+        (error, _) => error.toString(),
+      );
+
+      expect(result.failure, 'Exception: error');
+    });
+
     test('Returns Success', () {
       final result = getUser(value: true);
       if (result.isSuccess) {
@@ -67,6 +83,18 @@ void main() {
       final result = getUser(value: true);
 
       expect(() => result.failure, throwsException);
+    });
+
+    test('match with success', () {
+      final result = getUser(value: true);
+
+      expect(result.match((success) => success, (_) => 'default'), 'John Doe');
+    });
+
+    test('match with failure', () {
+      final result = getUser(value: false);
+
+      expect(result.match((success) => success, (_) => 'default'), 'default');
     });
 
     test('Apply map transformation to successful operation results', () {

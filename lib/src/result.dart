@@ -8,6 +8,20 @@ typedef Completion<T> = void Function(T value);
 /// A value that represents either a success or a failure, including an
 /// associated value in each case.
 abstract class Result<S, F> {
+  const Result();
+
+  /// Try to execute `run`. If no error occurs, then return [Success].
+  /// Otherwise return [Failure] containing the result of `onError`.
+  factory Result.tryCatch(
+      S Function() run, F Function(Object o, StackTrace s) onError) {
+    try {
+      return Success(run());
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e, s) {
+      return Failure(onError(e, s));
+    }
+  }
+
   /// Returns true if [Result] is [Failure].
   bool get isFailure => this is Failure<S, F>;
 
@@ -62,6 +76,15 @@ abstract class Result<S, F> {
     );
   }
 
+  /// Returns the value of [Success] result or null if result is a [Failure].
+  S? get nullableSuccess => isSuccess ? success : null;
+
+  /// Returns the value of [Failure] result or null if result is a [Success].
+  F? get nullableFailure => isFailure ? failure : null;
+
+  /// Returns the value from this [Success] or the result of `orElse` if this is a [Failure].
+  S getOrElse(S Function() orElse) => isSuccess ? success : orElse();
+
   /// Returns a new value of [Result] from closure
   /// either a success or a failure.
   ///
@@ -87,6 +110,28 @@ abstract class Result<S, F> {
     if (isFailure) {
       final right = this as Failure<S, F>;
       failure(right.value);
+    }
+  }
+
+  /// Applies `onSuccess` if this is a [Failure] or `onFailure` if this is a [Success].
+  ///
+  /// ```dart
+  /// final result = await getPhotos();
+  ///
+  /// if (result.isSuccess) {
+  ///   final items = result.map((i) => i.where((j) => j.title.length > 60)).success;
+  ///   print('Number of Long Titles: ${items.length}');
+  /// } else {
+  ///   print('Error: ${result.failure}');
+  /// }
+  /// ```
+  S match(S Function(S success) onSuccess, S Function(F failure) onFailure) {
+    if (isSuccess) {
+      final s = this as Success<S, F>;
+      return onSuccess(s.value);
+    } else {
+      final f = this as Failure<S, F>;
+      return onFailure(f.value);
     }
   }
 
