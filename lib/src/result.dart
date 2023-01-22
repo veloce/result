@@ -77,10 +77,10 @@ abstract class Result<S, F> {
   }
 
   /// Returns the value of [Success] result or null if result is a [Failure].
-  S? get nullableSuccess => isSuccess ? success : null;
+  S? get maybeSuccess => isSuccess ? success : null;
 
   /// Returns the value of [Failure] result or null if result is a [Success].
-  F? get nullableFailure => isFailure ? failure : null;
+  F? get maybeFailure => isFailure ? failure : null;
 
   /// Returns the value from this [Success] or the result of `orElse` if this is a [Failure].
   S getOrElse(S Function() orElse) => isSuccess ? success : orElse();
