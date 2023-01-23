@@ -4,21 +4,27 @@ import 'result.dart';
 
 /// A failure, storing a [Failure] value.
 @immutable
-class Failure<S, F> extends Result<S, F> {
-  final F value;
+class Failure<F> extends Result<Never, F> {
+  final F error;
 
-  Failure(this.value);
+  Failure(this.error);
+
+  @override
+  bool get isFailure => true;
+
+  @override
+  bool get isSuccess => false;
 
   @override
   bool operator ==(Object o) {
     if (identical(this, o)) return true;
 
-    return o is Failure<S, F> && o.value == value;
+    return o is Failure<F> && o.error == error;
   }
 
   @override
-  int get hashCode => value.hashCode;
+  int get hashCode => error.hashCode;
 
   @override
-  String toString() => 'Failure: $value';
+  String toString() => 'Failure: $error';
 }

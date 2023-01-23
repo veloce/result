@@ -1,27 +1,15 @@
-import 'dart:math';
-
-import 'package:result_type/result_type.dart';
+import 'package:result/result.dart';
 import 'package:test/test.dart';
 
 import 'utils/mock_error.dart';
 
 void main() {
   group('Result:', () {
-    Random? random;
-
-    setUp(() {
-      random = Random();
-    });
-
-    tearDown(() {
-      random = null;
-    });
-
     test('tryCatch constructor with success', () {
       final result = Result<String, String>.tryCatch(
           () => 'John Doe', (error, _) => error.toString());
 
-      expect(result.success, 'John Doe');
+      expect(result.getNullable, 'John Doe');
     });
 
     test('tryCatch constructor with failure', () {
@@ -30,59 +18,34 @@ void main() {
         (error, _) => error.toString(),
       );
 
-      expect(result.failure, 'Exception: error');
+      expect(result.maybeFailure?.error, 'Exception: error');
     });
 
-    test('Returns Success', () {
+    test('getOrThrow()', () {
       final result = getUser(value: true);
-      if (result.isSuccess) {
-        print('Success: ${result.success}');
-      } else {
-        print('Error: ${result.failure}');
-      }
 
-      expect(result.success, 'John Doe');
+      expect(result.getOrThrow(), 'John Doe');
     });
 
-    test('Returns Failure', () {
+    test('getFailureOrThrow()', () {
       final result = getUser(value: false);
-      if (result.isSuccess) {
-        print('Success: ${result.success}');
-      } else {
-        print('Error: ${result.failure}');
-      }
 
-      expect(result.failure, const MockError(404));
+      expect(result.getFailureOrThrow(), const MockError(404));
     });
 
-    test('Returns Success From Callbacks', () {
-      getUser(value: true)
-        ..result((success) {
-          expect(success, 'John Doe');
-        }, (_) {});
-    });
-
-    test('Returns Failure From Callbacks', () {
-      getUser(value: false)
-        ..result((_) {}, (error) {
-          expect(error, const MockError(404));
-        });
-    });
-
-    test(
-        '''Throw Exception when accessing success value without checking if isSuccess''',
+    test('Throw Exception when getting value without checking if isSuccess',
         () {
       final result = getUser(value: false);
 
-      expect(() => result.success, throwsException);
+      expect(result.getOrThrow, throwsException);
     });
 
     test(
-        '''Throw Exception when accessing failure value without checking if isFailure''',
+        'Throw Exception when accessing failure value without checking if isFailure',
         () {
       final result = getUser(value: true);
 
-      expect(() => result.failure, throwsException);
+      expect(result.getFailureOrThrow, throwsException);
     });
 
     test('fold with success', () {
@@ -105,101 +68,62 @@ void main() {
 
     test('Apply map transformation to successful operation results', () {
       final result = getUser(value: true);
-      final user =
-          result.map<String, MockError>((i) => i.toUpperCase()).success;
+      final user = result.map<String>((i) => i.toUpperCase()).getNullable;
 
       expect(user, 'JOHN DOE');
     });
 
-    test(
-        '''Throw an error from map transformation without applying transformation to error type''',
-        () {
+    test('Apply map transformation to failed operation results', () {
       final result = getUser(value: false);
+      final error = result.map<String>((i) => i.toUpperCase()).maybeFailure;
+
+      expect(error, Failure(const MockError(404)));
+    });
+
+    test('Apply mapFailure transformation to failure type', () {
       final error =
-          result.map<String, MockError>((i) => i.toUpperCase()).failure;
+          getUser(value: false).mapFailure<int>((i) => i.code).maybeFailure;
 
-      expect(error, const MockError(404));
+      expect(error, Failure(404));
     });
 
-    test('Apply mapError transformation to failure type', () {
-      final error = getUser(value: false)
-          .mapError<String, MockError>((i) => MockError(i.code - 4))
-          .failure;
-
-      expect(error.code, const MockError(400).code);
-    });
-
-    test(
-        '''Returns successful result without applying mapError transformation''',
+    test('Returns successful result without applying mapFailure transformation',
         () {
-      final maybeError = getUser(value: true)
-          .mapError<String, MockError>((i) => MockError(i.code - 4));
+      final maybeError = getUser(value: true).mapFailure<int>((i) => i.code);
 
-      if (maybeError.isFailure) {
-      } else {
-        expect(maybeError.success, 'John Doe');
-      }
+      expect(maybeError.isSuccess, true);
     });
 
     test('Apply flatMap transformation to successful operation results', () {
-      Result<int, MockError> getNextInteger() => Success(random!.nextInt(4));
-      Result<int, MockError> getNextAfterInteger(int n) =>
-          Success(random!.nextInt(n + 1));
+      Result<int, MockError> getNextInteger() => Success(1);
 
       final nextIntegerUnboxedResults =
-          getNextInteger().flatMap(getNextAfterInteger);
+          getNextInteger().flatMap((p0) => Success(p0 + 1));
 
       expect(
         nextIntegerUnboxedResults,
-        const TypeMatcher<Success<int, MockError>>(),
+        const TypeMatcher<Success<int>>(),
       );
     });
 
     test('flatMap does not apply transformation to Failure', () {
       Result<int, MockError> getNextInteger() => Failure(const MockError(451));
-      Result<int, MockError> getNextAfterInteger(int n) =>
-          Failure(const MockError(404));
 
       final nextIntegerUnboxedResults =
-          getNextInteger().flatMap(getNextAfterInteger);
+          getNextInteger().flatMap((p0) => Success(p0 + 1));
 
       expect(
         nextIntegerUnboxedResults,
-        const TypeMatcher<Failure<int, MockError>>(),
-      );
-    });
-
-    test('Apply flatMapError transformation to failure operation results', () {
-      Result<int, MockError> getNextInteger() => Failure(const MockError(451));
-      Result<int, MockError> getNextAfterInteger(MockError error) =>
-          Failure(MockError(error.code));
-
-      final nextIntegerUnboxedResults =
-          getNextInteger().flatMapError(getNextAfterInteger);
-
-      expect(
-        nextIntegerUnboxedResults,
-        const TypeMatcher<Failure<int, MockError>>(),
-      );
-    });
-
-    test(
-        '''flatMapError does not apply transformation to success operation results''',
-        () {
-      Result<int, MockError> getNextInteger() => Success(random!.nextInt(4));
-      Result<int, MockError> getNextAfterInteger(MockError error) =>
-          Failure(MockError(error.code));
-
-      final nextIntegerUnboxedResults =
-          getNextInteger().flatMapError(getNextAfterInteger);
-
-      expect(
-        nextIntegerUnboxedResults,
-        const TypeMatcher<Success<int, MockError>>(),
+        const TypeMatcher<Failure<MockError>>(),
       );
     });
   });
 }
 
-Result<String, MockError> getUser({required bool value}) =>
-    value ? Success('John Doe') : Failure(const MockError(404));
+Result<String, MockError> getUser({required bool value}) {
+  if (value) {
+    return Success('John Doe');
+  } else {
+    return Failure(const MockError(404));
+  }
+}
